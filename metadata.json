@@ -1,0 +1,8 @@
+{
+  "name": "Take A Break",
+  "description": "Reminder to take regular brakes",
+  "uuid": "take-a-break@vukv.github.com",
+  "shell-version": [
+    "42"
+  ]
+}
