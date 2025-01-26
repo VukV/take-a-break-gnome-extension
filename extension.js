@@ -18,9 +18,9 @@
 
 /* exported init */
 
-const GETTEXT_DOMAIN = 'my-indicator-extension';
+const GETTEXT_DOMAIN = 'take-a-break-extension';
 
-const { GObject, St } = imports.gi;
+const { GObject, St, Gio } = imports.gi;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Main = imports.ui.main;
@@ -28,20 +28,24 @@ const PanelMenu = imports.ui.panelMenu;
 const PopupMenu = imports.ui.popupMenu;
 
 const _ = ExtensionUtils.gettext;
+const Me = ExtensionUtils.getCurrentExtension();
+
+const ICONS_PATH = `${Me.path}/icons`;
+const TIMER_ICON_PATH = `${ICONS_PATH}/timer-symbolic.svg`;
 
 const Indicator = GObject.registerClass(
 class Indicator extends PanelMenu.Button {
     _init() {
-        super._init(0.0, _('My Shiny Indicator'));
+        super._init(0.0, _('Take A Break Indicator'));
 
         this.add_child(new St.Icon({
-            icon_name: 'face-smile-symbolic',
+            gicon: Gio.icon_new_for_string(TIMER_ICON_PATH),
             style_class: 'system-status-icon',
         }));
 
-        let item = new PopupMenu.PopupMenuItem(_('Show Notification'));
+        let item = new PopupMenu.PopupMenuItem(_('Test'));
         item.connect('activate', () => {
-            Main.notify(_('Whatʼs up, folks?'));
+            Main.notify(_('Take a break!'));
         });
         this.menu.addMenuItem(item);
     }
