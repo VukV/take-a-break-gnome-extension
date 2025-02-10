@@ -1,23 +1,3 @@
-/* extension.js
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * SPDX-License-Identifier: GPL-2.0-or-later
- */
-
-/* exported init */
-
 const GETTEXT_DOMAIN = 'take-a-break-extension';
 
 const { GObject, St, Gio } = imports.gi;
@@ -33,23 +13,43 @@ const Me = ExtensionUtils.getCurrentExtension();
 const ICONS_PATH = `${Me.path}/icons`;
 const TIMER_ICON_PATH = `${ICONS_PATH}/timer-symbolic.svg`;
 
+let TIMER_ACTIVE = false;
+
 const Indicator = GObject.registerClass(
-class Indicator extends PanelMenu.Button {
-    _init() {
-        super._init(0.0, _('Take A Break Indicator'));
+    class Indicator extends PanelMenu.Button {
+        _init() {
+            super._init(0.0, _('Take A Break Indicator'));
 
-        this.add_child(new St.Icon({
-            gicon: Gio.icon_new_for_string(TIMER_ICON_PATH),
-            style_class: 'system-status-icon',
-        }));
+            // Bar icon
+            this.add_child(new St.Icon({
+                gicon: Gio.icon_new_for_string(TIMER_ICON_PATH),
+                style_class: 'system-status-icon',
+            }));
 
-        let item = new PopupMenu.PopupMenuItem(_('Test'));
-        item.connect('activate', () => {
-            Main.notify(_('Take a break!'));
-        });
-        this.menu.addMenuItem(item);
-    }
-});
+            // Menu
+            this.menu.addMenuItem(this._initSettingsMenu());
+        }
+
+        _initSettingsMenu() {
+            let menuItem = new PopupMenu.PopupBaseMenuItem({ reactive: false });
+
+            let box = new St.BoxLayout({ vertical: true, style_class: 'panel-menu' });
+
+            this._toggleSwitch = new PopupMenu.PopupSwitchMenuItem(_('Timer Active'), false);
+            this._toggleSwitch.connect('toggled', (item, state) => {
+                this._onToggleSwitch(state);
+            });
+
+            box.add_child(this._toggleSwitch.actor);
+            menuItem.actor.add_child(box);
+
+            return menuItem;
+        }
+
+        _onToggleSwitch(state) {
+            TIMER_ACTIVE = state;
+        }
+    });
 
 class Extension {
     constructor(uuid) {
