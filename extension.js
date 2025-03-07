@@ -30,36 +30,28 @@ const Indicator = GObject.registerClass(
             }));
 
             // Menu
-            this.menu.addMenuItem(this._initSettingsMenu());
+            this._initSettingsMenu();
         }
 
         _initSettingsMenu() {
-            let menuItem = new PopupMenu.PopupBaseMenuItem({ reactive: false });
-            let box = new St.BoxLayout({ vertical: true, style_class: 'panel-menu' });
-
             // Toggle switch
             this._toggleSwitch = new PopupMenu.PopupSwitchMenuItem(_('Timer Active'), false);
             this._toggleSwitch.connect('toggled', (item, state) => {
                 this._onToggleSwitch(state);
             });
-            box.add_child(this._toggleSwitch.actor);
+            this.menu.addMenuItem(this._toggleSwitch);
 
             // Slider for selecting time
+            let sliderContainer = new PopupMenu.PopupBaseMenuItem();
             this._slider = new Slider.Slider((TIMER_DURATION - 5) / 85); // Normalize from 5-90 to 0-1
             this._slider.connect('notify::value', () => {
                 this._updateSliderValue();
             });
-
-            let sliderItem = new PopupMenu.PopupBaseMenuItem({ reactive: false });
-            sliderItem.actor.add_child(this._slider);
-            box.add_child(sliderItem.actor);
+            sliderContainer.actor.add_child(this._slider);
+            this.menu.addMenuItem(sliderContainer);
 
             this._sliderLabel = new St.Label({ text: `${TIMER_DURATION} min`, y_align: St.Align.MIDDLE });
-            box.add_child(this._sliderLabel);
-
-
-            menuItem.actor.add_child(box);
-            return menuItem;
+            sliderContainer.actor.add_child(this._sliderLabel);
         }
 
         _onToggleSwitch(state) {
@@ -67,7 +59,7 @@ const Indicator = GObject.registerClass(
         }
 
         _updateSliderValue() {
-             // Convert 0-1 range to 5-90 min
+            // Convert 0-1 range to 5-90 min
             TIMER_DURATION = Math.round(this._slider.value * 85 / 5) * 5 + 5;
             this._sliderLabel.text = `${TIMER_DURATION} min`;
         }
