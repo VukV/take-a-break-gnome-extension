@@ -1,6 +1,6 @@
 const GETTEXT_DOMAIN = 'take-a-break-extension';
 
-const { GObject, St, Gio } = imports.gi;
+const { GObject, St, Gio, GLib } = imports.gi;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Main = imports.ui.main;
@@ -15,7 +15,9 @@ const ICONS_PATH = `${Me.path}/icons`;
 const TIMER_ICON_PATH = `${ICONS_PATH}/timer-symbolic.svg`;
 
 let TIMER_ACTIVE = false;
-let TIMER_DURATION = 25;
+let TIMER_DURATION = 30; // time in minutes
+
+let _timeoutId = null; // storing timeout id for GLib loop management
 
 const Indicator = GObject.registerClass(
     class Indicator extends PanelMenu.Button {
@@ -56,12 +58,58 @@ const Indicator = GObject.registerClass(
 
         _onToggleSwitch(state) {
             TIMER_ACTIVE = state;
+            if (TIMER_ACTIVE) {
+                this._startBreakReminder();
+            } else {
+                this._stopBreakReminder();
+            }
         }
 
         _updateSliderValue() {
             // Convert 0-1 range to 5-90 min
             TIMER_DURATION = Math.round(this._slider.value * 85 / 5) * 5 + 5;
             this._sliderLabel.text = `${TIMER_DURATION} min`;
+
+            // If the timer is active, restart with new duration
+            if (TIMER_ACTIVE) {
+                this._stopBreakReminder();
+                this._startBreakReminder();
+            }
+        }
+
+        _startBreakReminder() {
+            this._stopBreakReminder() // Clear existing timeout
+
+            const intervalMs = TIMER_DURATION * 60 * 1000; // Convert minutes to ms
+
+            _timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, intervalMs, () => {
+                this._showBreakNotification();
+                return GLib.SOURCE_CONTINUE;
+            });
+        }
+
+        _stopBreakReminder() {
+            if (_timeoutId) {
+                GLib.Source.remove(_timeoutId);
+                _timeoutId = null;
+            }
+        }
+
+        _showBreakNotification() {
+            Main.notify('Take A Break!', 'Step away from your computer. Touch grass.', {
+                body: 'Click OKAY to dismiss.',
+                persistent: true, // Make the notification permanent
+                actions: {
+                    'ok': {
+                        label: _('OKAY')
+                    }
+                }
+            });
+        }
+
+        destroy() {
+            this._stopBreakReminder();
+            super.destroy();
         }
     });
 
