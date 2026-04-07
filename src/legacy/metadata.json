@@ -1,0 +1,11 @@
+{
+  "name": "Take A Break",
+  "description": "Reminder to take regular breaks",
+  "uuid": "take-a-break@vukv.github.com",
+  "shell-version": [
+    "42",
+    "43",
+    "44"
+  ],
+  "url": "https://github.com/VukV/take-a-break-gnome-extension"
+}
