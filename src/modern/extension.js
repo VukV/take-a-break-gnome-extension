@@ -35,7 +35,7 @@ export default class TakeABreakExtension extends Extension {
         this._durationMinutes = DEFAULT_DURATION_MINUTES;
         this._timeoutId = 0;
 
-        this._indicator = new PanelMenu.Button(0.0, this.gettext('Take A Break Indicator'), false);
+        this._indicator = new PanelMenu.Button(0.5, this.gettext('Take A Break Indicator'), false);
         this._indicator.add_child(this._createPanelIcon());
 
         this._buildMenu();
