@@ -1,0 +1,166 @@
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
+import St from 'gi://St';
+
+import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
+import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
+import {Slider as ShellSlider} from 'resource:///org/gnome/shell/ui/slider.js';
+
+const MIN_DURATION_MINUTES = 5;
+const MAX_DURATION_MINUTES = 90;
+const STEP_MINUTES = 5;
+const DEFAULT_DURATION_MINUTES = 30;
+
+export default class TakeABreakExtension extends Extension {
+    constructor(metadata) {
+        super(metadata);
+
+        this._indicator = null;
+        this._toggleSwitch = null;
+        this._durationSlider = null;
+        this._durationLabel = null;
+
+        this._timerActive = false;
+        this._durationMinutes = DEFAULT_DURATION_MINUTES;
+        this._timeoutId = 0;
+    }
+
+    enable() {
+        this._timerActive = false;
+        this._durationMinutes = DEFAULT_DURATION_MINUTES;
+        this._timeoutId = 0;
+
+        this._indicator = new PanelMenu.Button(0.0, this.gettext('Take A Break Indicator'), false);
+        this._indicator.add_child(this._createPanelIcon());
+
+        this._buildMenu();
+
+        Main.panel.addToStatusArea(this.uuid, this._indicator);
+    }
+
+    disable() {
+        this._stopReminder();
+
+        this._toggleSwitch = null;
+        this._durationSlider = null;
+        this._durationLabel = null;
+
+        this._indicator?.destroy();
+        this._indicator = null;
+    }
+
+    _createPanelIcon() {
+        const icon = new St.Icon({
+            style_class: 'system-status-icon',
+        });
+
+        const iconPath = `${this.path}/timer-symbolic.svg`;
+        if (GLib.file_test(iconPath, GLib.FileTest.EXISTS))
+            icon.gicon = Gio.icon_new_for_string(iconPath);
+        else
+            icon.icon_name = 'alarm-symbolic';
+
+        return icon;
+    }
+
+    _buildMenu() {
+        this._toggleSwitch = new PopupMenu.PopupSwitchMenuItem(
+            this.gettext('Timer Active'),
+            this._timerActive
+        );
+        this._toggleSwitch.connect('toggled', (_item, state) => {
+            this._setTimerActive(state);
+        });
+        this._indicator.menu.addMenuItem(this._toggleSwitch);
+
+        const sliderItem = new PopupMenu.PopupBaseMenuItem({
+            activate: false,
+            reactive: false,
+        });
+
+        this._durationSlider = new ShellSlider(this._durationToSliderValue(this._durationMinutes));
+        this._durationSlider.connect('notify::value', () => {
+            this._updateDurationFromSlider();
+        });
+        this._addMenuChild(sliderItem, this._durationSlider);
+
+        this._durationLabel = new St.Label({
+            text: this._formatDurationLabel(this._durationMinutes),
+        });
+        this._addMenuChild(sliderItem, this._durationLabel);
+
+        this._indicator.menu.addMenuItem(sliderItem);
+    }
+
+    _addMenuChild(menuItem, child) {
+        if (typeof menuItem.add_child === 'function') {
+            menuItem.add_child(child);
+            return;
+        }
+
+        menuItem.actor.add_child(child);
+    }
+
+    _setTimerActive(active) {
+        this._timerActive = active;
+
+        if (this._timerActive)
+            this._startReminder();
+        else
+            this._stopReminder();
+    }
+
+    _updateDurationFromSlider() {
+        this._durationMinutes = this._sliderValueToDuration(this._durationSlider.value);
+        this._durationLabel.text = this._formatDurationLabel(this._durationMinutes);
+
+        if (this._timerActive)
+            this._startReminder();
+    }
+
+    _durationToSliderValue(minutes) {
+        return (minutes - MIN_DURATION_MINUTES) / (MAX_DURATION_MINUTES - MIN_DURATION_MINUTES);
+    }
+
+    _sliderValueToDuration(value) {
+        const totalRange = MAX_DURATION_MINUTES - MIN_DURATION_MINUTES;
+        const rawMinutes = MIN_DURATION_MINUTES + value * totalRange;
+        const roundedMinutes = Math.round(rawMinutes / STEP_MINUTES) * STEP_MINUTES;
+
+        return Math.max(MIN_DURATION_MINUTES, Math.min(MAX_DURATION_MINUTES, roundedMinutes));
+    }
+
+    _formatDurationLabel(minutes) {
+        return `${minutes} min`;
+    }
+
+    _startReminder() {
+        this._stopReminder();
+
+        const intervalMs = this._durationMinutes * 60 * 1000;
+        this._timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, intervalMs, () => {
+            this._showBreakNotification();
+            return GLib.SOURCE_CONTINUE;
+        });
+
+        if (GLib.Source?.set_name_by_id)
+            GLib.Source.set_name_by_id(this._timeoutId, '[take-a-break] reminder');
+    }
+
+    _stopReminder() {
+        if (!this._timeoutId)
+            return;
+
+        GLib.Source.remove(this._timeoutId);
+        this._timeoutId = 0;
+    }
+
+    _showBreakNotification() {
+        Main.notify(
+            this.gettext('Take A Break!'),
+            this.gettext('Step away from your computer. Touch grass.')
+        );
+    }
+}
