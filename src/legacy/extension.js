@@ -24,6 +24,9 @@ class Indicator extends PanelMenu.Button {
         this._timerActive = false;
         this._durationMinutes = DEFAULT_DURATION_MINUTES;
         this._timeoutId = 0;
+        this._sliderMenuItem = null;
+        this._toggleSwitchChangedId = 0;
+        this._durationSliderChangedId = 0;
 
         this._buildPanelIcon();
         this._buildMenu();
@@ -38,28 +41,28 @@ class Indicator extends PanelMenu.Button {
 
     _buildMenu() {
         this._toggleSwitch = new PopupMenu.PopupSwitchMenuItem(_('Timer Active'), this._timerActive);
-        this._toggleSwitch.connect('toggled', (_item, state) => {
+        this._toggleSwitchChangedId = this._toggleSwitch.connect('toggled', (_item, state) => {
             this._setTimerActive(state);
         });
         this.menu.addMenuItem(this._toggleSwitch);
 
-        const sliderItem = new PopupMenu.PopupBaseMenuItem({
+        this._sliderMenuItem = new PopupMenu.PopupBaseMenuItem({
             activate: false,
             reactive: false,
         });
 
         this._durationSlider = new Slider.Slider(this._durationToSliderValue(this._durationMinutes));
-        this._durationSlider.connect('notify::value', () => {
+        this._durationSliderChangedId = this._durationSlider.connect('notify::value', () => {
             this._updateDurationFromSlider();
         });
-        this._addMenuChild(sliderItem, this._durationSlider);
+        this._addMenuChild(this._sliderMenuItem, this._durationSlider);
 
         this._durationLabel = new St.Label({
             text: this._formatDurationLabel(this._durationMinutes),
         });
-        this._addMenuChild(sliderItem, this._durationLabel);
+        this._addMenuChild(this._sliderMenuItem, this._durationLabel);
 
-        this.menu.addMenuItem(sliderItem);
+        this.menu.addMenuItem(this._sliderMenuItem);
     }
 
     _addMenuChild(menuItem, child) {
@@ -129,8 +132,34 @@ class Indicator extends PanelMenu.Button {
         Main.notify(_('Take A Break!'), _('Step away from your computer. Touch grass.'));
     }
 
+    _disconnectSignals() {
+        if (this._toggleSwitch && this._toggleSwitchChangedId) {
+            this._toggleSwitch.disconnect(this._toggleSwitchChangedId);
+            this._toggleSwitchChangedId = 0;
+        }
+
+        if (this._durationSlider && this._durationSliderChangedId) {
+            this._durationSlider.disconnect(this._durationSliderChangedId);
+            this._durationSliderChangedId = 0;
+        }
+    }
+
+    _destroyMenuObjects() {
+        this._durationLabel?.destroy?.();
+        this._durationSlider?.destroy?.();
+        this._sliderMenuItem?.destroy?.();
+        this._toggleSwitch?.destroy?.();
+
+        this._toggleSwitch = null;
+        this._sliderMenuItem = null;
+        this._durationSlider = null;
+        this._durationLabel = null;
+    }
+
     destroy() {
         this._stopReminder();
+        this._disconnectSignals();
+        this._destroyMenuObjects();
         super.destroy();
     }
 });
