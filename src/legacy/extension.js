@@ -25,8 +25,6 @@ class Indicator extends PanelMenu.Button {
         this._durationMinutes = DEFAULT_DURATION_MINUTES;
         this._timeoutId = 0;
         this._sliderMenuItem = null;
-        this._toggleSwitchChangedId = 0;
-        this._durationSliderChangedId = 0;
 
         this._buildPanelIcon();
         this._buildMenu();
@@ -41,9 +39,11 @@ class Indicator extends PanelMenu.Button {
 
     _buildMenu() {
         this._toggleSwitch = new PopupMenu.PopupSwitchMenuItem(_('Timer Active'), this._timerActive);
-        this._toggleSwitchChangedId = this._toggleSwitch.connect('toggled', (_item, state) => {
-            this._setTimerActive(state);
-        });
+        this._toggleSwitch.connectObject(
+            'toggled',
+            (_item, state) => this._setTimerActive(state),
+            this
+        );
         this.menu.addMenuItem(this._toggleSwitch);
 
         this._sliderMenuItem = new PopupMenu.PopupBaseMenuItem({
@@ -52,9 +52,11 @@ class Indicator extends PanelMenu.Button {
         });
 
         this._durationSlider = new Slider.Slider(this._durationToSliderValue(this._durationMinutes));
-        this._durationSliderChangedId = this._durationSlider.connect('notify::value', () => {
-            this._updateDurationFromSlider();
-        });
+        this._durationSlider.connectObject(
+            'notify::value',
+            () => this._updateDurationFromSlider(),
+            this
+        );
         this._addMenuChild(this._sliderMenuItem, this._durationSlider);
 
         this._durationLabel = new St.Label({
@@ -133,15 +135,8 @@ class Indicator extends PanelMenu.Button {
     }
 
     _disconnectSignals() {
-        if (this._toggleSwitch && this._toggleSwitchChangedId) {
-            this._toggleSwitch.disconnect(this._toggleSwitchChangedId);
-            this._toggleSwitchChangedId = 0;
-        }
-
-        if (this._durationSlider && this._durationSliderChangedId) {
-            this._durationSlider.disconnect(this._durationSliderChangedId);
-            this._durationSliderChangedId = 0;
-        }
+        this._toggleSwitch?.disconnectObject(this);
+        this._durationSlider?.disconnectObject(this);
     }
 
     _destroyMenuObjects() {
