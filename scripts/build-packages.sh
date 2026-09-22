@@ -18,7 +18,6 @@ require_command() {
 copy_shared_assets() {
     local stage_dir="$1"
 
-    cp "$ROOT_DIR/stylesheet.css" "$stage_dir/stylesheet.css"
     cp "$ROOT_DIR/icons/timer-symbolic.svg" "$stage_dir/timer-symbolic.svg"
 }
 
