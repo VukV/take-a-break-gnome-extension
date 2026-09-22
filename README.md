@@ -19,7 +19,7 @@ Because GNOME 45+ moved extensions to ESM while GNOME 42-44 still use legacy `im
 
 - `src/legacy`: GNOME 42-44 implementation (`imports.*`)
 - `src/modern`: GNOME 45-49 implementation (ESM)
-- `icons/` and `stylesheet.css`: shared assets
+- `icons/`: shared assets
 - `scripts/build-packages.sh`: builds one selected extension zip bundle
 
 ## Build

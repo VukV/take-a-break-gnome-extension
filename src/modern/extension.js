@@ -22,8 +22,6 @@ export default class TakeABreakExtension extends Extension {
         this._sliderMenuItem = null;
         this._durationSlider = null;
         this._durationLabel = null;
-        this._toggleSwitchChangedId = 0;
-        this._durationSliderChangedId = 0;
 
         this._timerActive = false;
         this._durationMinutes = DEFAULT_DURATION_MINUTES;
@@ -71,9 +69,11 @@ export default class TakeABreakExtension extends Extension {
             this.gettext('Timer Active'),
             this._timerActive
         );
-        this._toggleSwitchChangedId = this._toggleSwitch.connect('toggled', (_item, state) => {
-            this._setTimerActive(state);
-        });
+        this._toggleSwitch.connectObject(
+            'toggled',
+            (_item, state) => this._setTimerActive(state),
+            this
+        );
         this._indicator.menu.addMenuItem(this._toggleSwitch);
 
         this._sliderMenuItem = new PopupMenu.PopupBaseMenuItem({
@@ -82,9 +82,11 @@ export default class TakeABreakExtension extends Extension {
         });
 
         this._durationSlider = new ShellSlider(this._durationToSliderValue(this._durationMinutes));
-        this._durationSliderChangedId = this._durationSlider.connect('notify::value', () => {
-            this._updateDurationFromSlider();
-        });
+        this._durationSlider.connectObject(
+            'notify::value',
+            () => this._updateDurationFromSlider(),
+            this
+        );
         this._addMenuChild(this._sliderMenuItem, this._durationSlider);
 
         this._durationLabel = new St.Label({
@@ -166,15 +168,8 @@ export default class TakeABreakExtension extends Extension {
     }
 
     _disconnectSignals() {
-        if (this._toggleSwitch && this._toggleSwitchChangedId) {
-            this._toggleSwitch.disconnect(this._toggleSwitchChangedId);
-            this._toggleSwitchChangedId = 0;
-        }
-
-        if (this._durationSlider && this._durationSliderChangedId) {
-            this._durationSlider.disconnect(this._durationSliderChangedId);
-            this._durationSliderChangedId = 0;
-        }
+        this._toggleSwitch?.disconnectObject(this);
+        this._durationSlider?.disconnectObject(this);
     }
 
     _destroyMenuObjects() {
